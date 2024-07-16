@@ -1,42 +1,38 @@
-FROM public.ecr.aws/lambda/python:3.9 as build
+FROM public.ecr.aws/lambda/python:3.9 AS build
 
-ARG VERSION=7.50
-ENV VERSION=${VERSION}
-
-RUN yum install -y make gcc-c++ wget unzip && yum clean all
+# Install build dependencies
+RUN yum install -y make gcc-c++ wget zip unzip \
+    && yum clean all
 
 WORKDIR /Astrolog
 
-RUN wget -q "https://github.com/CruiserOne/Astrolog/archive/refs/tags/v${VERSION}.zip" && unzip v${VERSION}.zip &&  rm -f v${VERSION}.zip
+# Get latest version of Astrolog, unzip and remove the zip file
+ARG ASTROLOG_VERSION
+RUN test "${ASTROLOG_VERSION}" \
+    && wget -q "https://github.com/CruiserOne/Astrolog/archive/refs/tags/v${ASTROLOG_VERSION}.zip" \
+    && unzip v${ASTROLOG_VERSION}.zip \
+    && rm -f v${ASTROLOG_VERSION}.zip
 
-WORKDIR /Astrolog/Astrolog-${VERSION}
+WORKDIR /Astrolog/Astrolog-${ASTROLOG_VERSION}
 
+# Disable X11 support and remove X11 dependencies,
+# Run make clean and make to compile the binary
+# Generate a zip file with the compiled binary and the data files
+ARG MAKE_ARGS
 RUN sed -i 's/^#define X11/\/\/#define X11/g' astrolog.h && \
 	sed -i 's/LIBS = -lm -lX11 -ldl -s/LIBS = -lm -ldl -s/g' Makefile \
 	&& make clean \
-	&& make
+	&& make ${MAKE_ARGS} \
+	&& chmod +x astrolog \
+	&& mkdir -p /opt/bin /out \
+	&& cd /Astrolog/Astrolog-${ASTROLOG_VERSION}/ \
+	&& cp astrolog *.as *.se1 *.txt /opt/bin/ \
+    && zip -r /out/astrolog-bin-${ASTROLOG_VERSION}.zip /opt
 
-FROM busybox as stage
+FROM scratch AS final
 
-ARG VERSION=7.50
-
-WORKDIR /opt/bin
-
-COPY --from=build /Astrolog/Astrolog-${VERSION}/astrolog .
-COPY --from=build /Astrolog/Astrolog-${VERSION}/*.se1 .
-COPY --from=build /Astrolog/Astrolog-${VERSION}/*.txt .
-COPY --from=build /Astrolog/Astrolog-${VERSION}/*.as .
-
-RUN chmod +x ./astrolog
+ARG ASTROLOG_VERSION
 
 WORKDIR /out
 
-RUN tar czf /out/astrolog-bin-${VERSION}.tar.gz /opt 
-
-FROM scratch as final
-
-ARG VERSION=7.50
-
-WORKDIR /out
-
-COPY --from=stage /out/astrolog-bin-${VERSION}.tar.gz .
+COPY --from=build /out/astrolog-bin-${ASTROLOG_VERSION}.zip .
