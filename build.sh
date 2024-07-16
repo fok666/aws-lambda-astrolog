@@ -1,29 +1,37 @@
 #!/bin/bash
 
-VERSION=7.50
+# Set desired Astrolog version
+# https://www.astrolog.org/
+# https://github.com/CruiserOne/Astrolog/releases
+ASTROLOG_VERSION=7.70
 
+# Get the base name of the current directory
 BASE=`basename $(pwd) | tr [:upper:] [:lower:]`
+# If a parameter is given, use it as the base name
 if [ -n "$1" ]; then
   BASE=`echo "$1" | tr [:upper:] [:lower:]`
 fi
 
-docker build --build-arg VERSION=${VERSION} -t $BASE . || exit $?
+# Build the image
+docker build --platform=linux/amd64 --build-arg ASTROLOG_VERSION=${ASTROLOG_VERSION} --build-arg MAKE_ARGS=-j8 -t $BASE . || exit $?
 
+# Save the image as a tarball
 docker save -o $BASE.tar $BASE
 
-# get layer config
+# get layer config file from tarball
 tar xvf $BASE.tar repositories
-LAYER=$(jq -r '.|.[]|.[]' repositories)
 
-# extract layer
-tar xvf $BASE.tar $LAYER/layer.tar
+# Get the layer name from repositories file
+LAYER="blobs/sha256/$(jq -r '.|.[]|.[]' repositories)"
 
-# expand layer
-tar xvf $LAYER/layer.tar
+# extract layer from tarball
+tar xvf $BASE.tar $LAYER
+
+# expand layer from tarball, this layer contains the compiled binaries
+tar xvf $LAYER
 
 # remove intermediate fils
-rm -rf $BASE.tar repositories $LAYER
+rm -rf $BASE.tar repositories blobs
 
-# debug result:
-ls out
-
+# List result:
+ls ./out
