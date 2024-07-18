@@ -1,4 +1,5 @@
-FROM public.ecr.aws/lambda/python:3.9 AS build
+ARG LAMBDA_VERSION
+FROM public.ecr.aws/lambda/python:${LAMBDA_VERSION} AS build
 
 # Install build dependencies
 RUN yum install -y make gcc-c++ wget zip unzip \
