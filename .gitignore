@@ -131,3 +131,5 @@ dmypy.json
 # Temporary files
 out
 blobs
+repositories
+*.tar
