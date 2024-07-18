@@ -19,8 +19,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Run build
-      run: ls -l \
-           && docker build \
+      run: docker build \
              --build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION) \
              --build-arg LAMBDA_VERSION=$(LAMBDA_VERSION) \
              -t aws-lambda-astrolog . \
@@ -31,7 +30,7 @@ jobs:
            && tar xvf aws-lambda-astrolog.tar $LAYER \
            && tar xvf $LAYER \
            && rm -rf aws-lambda-astrolog.tar repositories blobs \
-           && ls ./out./build.sh aws-lambda-astrolog ${{env.ASTROLOG_VERSION}} ${{env.LAMBDA_VERSION}}
+           && ls ./out
 
     # Add a step to upload the build artifact to a release or other storage location
     - name: Upload build artifact
