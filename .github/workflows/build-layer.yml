@@ -20,10 +20,7 @@ jobs:
 
     - name: Run build
       run: |
-        docker build \
-         --build-arg ASTROLOG_VERSION=${{ env.ASTROLOG_VERSION }}
-         --build-arg LAMBDA_VERSION=${{ env.LAMBDA_VERSION }}
-         -t aws-lambda-astrolog .
+        docker build --build-arg ASTROLOG_VERSION=${{ env.ASTROLOG_VERSION }} --build-arg LAMBDA_VERSION=${{ env.LAMBDA_VERSION }} -t aws-lambda-astrolog .
         docker images
         docker save -o aws-lambda-astrolog.tar aws-lambda-astrolog
         tar xvf aws-lambda-astrolog.tar repositories
