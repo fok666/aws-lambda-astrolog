@@ -13,7 +13,7 @@ variables:
 
 stages:
 - stage: Build
-  displayName: Build image
+  displayName: Build image  
   jobs:
   - job: Build
     displayName: Build
@@ -27,21 +27,17 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
           $(tag)
-        arguments: '--build-arg ASTROLOG_VERSION=${ASTROLOG_VERSION}'
-    - task: Docker@2
-      displayName: Save archive
-      inputs:
-        command: 'save'
-        arguments: '-o $(tag).tar $(tag)'
+        arguments: '--build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION)'
     - task: Bash@3
       inputs:
         targetType: 'inline'
         script: |
+          docker save -o $(tag).tar $(tag)
           tar xvf $(tag).tar repositories
           LAYER="blobs/sha256/$(jq -r '.|.[]|.[]' repositories)"
-          tar xvf $BASE.tar $LAYER
+          tar xvf $(tag).tar $LAYER
           tar xvf $LAYER
-          rm -rf $BASE.tar repositories blobs
+          rm -rf $(tag).tar repositories blobs
           ls ./out
     - task: PublishPipelineArtifact@1
       inputs:
