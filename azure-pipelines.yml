@@ -26,24 +26,24 @@ stages:
         command: build
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
-          $(tag)
+          aws-lambda-astrolog
         arguments: '--build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION)'
     - task: Bash@3
       displayName: Extract artifact layer
       inputs:
         targetType: 'inline'
         script: |
-          docker save -o $(tag).tar $(tag)
-          tar xvf $(tag).tar repositories
+          docker save -o aws-lambda-astrolog.tar aws-lambda-astrolog
+          tar xvf aws-lambda-astrolog.tar repositories
           LAYER="blobs/sha256/$(cut -d\" -f6 repositories)"
-          tar xvf $(tag).tar $LAYER
+          tar xvf aws-lambda-astrolog.tar $LAYER
           tar xvf $LAYER
-          rm -rf $(tag).tar repositories blobs
+          rm -rf aws-lambda-astrolog.tar repositories blobs
           ls ./out
     - task: PublishPipelineArtifact@1
       inputs:
         targetPath: '$(Pipeline.Workspace)/out/'
-        artifact: '$(tag)'
+        artifact: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
         publishLocation: 'pipeline'
 
 
