@@ -21,7 +21,7 @@ stages:
       vmImage: ubuntu-latest
     steps:
     - task: Bash@3
-      displayName: Extract artifact layer
+      displayName: Build and Extract
       inputs:
         targetType: 'inline'
         script: |
@@ -37,8 +37,9 @@ stages:
           rm -rf aws-lambda-astrolog.tar repositories blobs
           ls ./out
     - task: PublishPipelineArtifact@1
+      displayName: Publish Artifact
       inputs:
-        targetPath: '$(Pipeline.Workspace)/out/'
+        targetPath: '$(Build.SourcesDirectory)/out/'
         artifact: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
         publishLocation: 'pipeline'
 
