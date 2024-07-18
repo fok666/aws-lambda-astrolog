@@ -36,11 +36,12 @@ stages:
           tar xvf $LAYER
           rm -rf aws-lambda-astrolog.tar repositories blobs
           ls ./out
-    - task: PublishPipelineArtifact@1
-      displayName: Publish Artifact
+    - task: UniversalPackages@0
       inputs:
-        targetPath: '$(Build.SourcesDirectory)/out/'
-        artifact: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
-        publishLocation: 'pipeline'
-
-
+        command: 'publish'
+        publishDirectory: '$(Build.SourcesDirectory)/out/'
+        feedsToUsePublish: 'internal'
+        vstsFeedPublish: 'e60ca8c4-457f-4edb-8eb7-8ed83edbaf79/664d455e-4358-4eb6-baa6-874a55c41ffd'
+        vstsFeedPackagePublish: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
+        versionOption: 'patch'
+        packagePublishDescription: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
