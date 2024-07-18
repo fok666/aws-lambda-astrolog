@@ -20,19 +20,15 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
-    - task: Docker@2
-      displayName: Build an image
-      inputs:
-        command: build
-        dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
-        tags: |
-          aws-lambda-astrolog
-        arguments: '--build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION)'
     - task: Bash@3
       displayName: Extract artifact layer
       inputs:
         targetType: 'inline'
         script: |
+          cd $(Build.SourcesDirectory)
+          ls -l
+          docker build --build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION) -t aws-lambda-astrolog .
+          docker images
           docker save -o aws-lambda-astrolog.tar aws-lambda-astrolog
           tar xvf aws-lambda-astrolog.tar repositories
           LAYER="blobs/sha256/$(cut -d\" -f6 repositories)"
