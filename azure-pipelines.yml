@@ -29,12 +29,13 @@ stages:
           $(tag)
         arguments: '--build-arg ASTROLOG_VERSION=$(ASTROLOG_VERSION)'
     - task: Bash@3
+      displayName: Extract artifact layer
       inputs:
         targetType: 'inline'
         script: |
           docker save -o $(tag).tar $(tag)
           tar xvf $(tag).tar repositories
-          LAYER="blobs/sha256/$(jq -r '.|.[]|.[]' repositories)"
+          LAYER="blobs/sha256/$(cut -d\" -f6 repositories)"
           tar xvf $(tag).tar $LAYER
           tar xvf $LAYER
           rm -rf $(tag).tar repositories blobs
