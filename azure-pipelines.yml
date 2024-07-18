@@ -1,0 +1,52 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+        tags: |
+          $(tag)
+        arguments: '--build-arg ASTROLOG_VERSION=${ASTROLOG_VERSION}'
+    - task: Docker@2
+      displayName: Save archive
+      inputs:
+        command: 'save'
+        arguments: '-o $(tag).tar $(tag)'
+    - task: Bash@3
+      inputs:
+        targetType: 'inline'
+        script: |
+          tar xvf $(tag).tar repositories
+          LAYER="blobs/sha256/$(jq -r '.|.[]|.[]' repositories)"
+          tar xvf $BASE.tar $LAYER
+          tar xvf $LAYER
+          rm -rf $BASE.tar repositories blobs
+          ls ./out
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Pipeline.Workspace)/out/'
+        artifact: '$(tag)'
+        publishLocation: 'pipeline'
+
+
