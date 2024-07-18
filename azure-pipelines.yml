@@ -45,3 +45,4 @@ stages:
         vstsFeedPackagePublish: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
         versionOption: 'patch'
         packagePublishDescription: 'aws-lambda-astrolog-$(ASTROLOG_VERSION)'
+        verbosity: 'Information'
