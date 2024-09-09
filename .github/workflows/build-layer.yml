@@ -1,0 +1,40 @@
+# This action fetches a file using HTTP GET and executes the build command "build.sh" from the current repo.
+# The command uses an environment variable ASTROLOG_VERSION to configure the HTTP URL.
+name: Fetch and Build Astrolog
+
+on:
+  workflow_dispatch:
+
+env:
+  # Setting an environment variable with the value of a configuration variable
+  ASTROLOG_VERSION: ${{vars.ASTROLOG_VERSION}}
+  LAMBDA_VERSION: ${{vars.LAMBDA_VERSION}}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run build
+      run: |
+        docker build --build-arg ASTROLOG_VERSION=${{ env.ASTROLOG_VERSION }} --build-arg LAMBDA_VERSION=${{ env.LAMBDA_VERSION }} -t aws-lambda-astrolog .
+        docker images
+        docker save -o aws-lambda-astrolog.tar aws-lambda-astrolog
+        tar xvf aws-lambda-astrolog.tar repositories
+        LAYER="blobs/sha256/$(cut -d\" -f6 repositories)"
+        tar xvf aws-lambda-astrolog.tar $LAYER
+        tar xvf $LAYER
+        rm -rf aws-lambda-astrolog.tar repositories blobs
+        ls ./out
+
+    # Add a step to upload the build artifact to a release or other storage location
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aws-astrolog-bin-${{ env.ASTROLOG_VERSION }}
+        path: out/*.zip
+        compression-level: 0
+
