@@ -2,6 +2,8 @@
 
 Build [Astrolog](https://www.astrolog.org/) as a layer for AWS Lambda functions.
 
+[![Weekly Version Check](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/version-check.yml/badge.svg)](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/version-check.yml) [![Dependabot Updates](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/dependabot/dependabot-updates) [![CodeQL](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/github-code-scanning/codeql) [![Fetch and Build Astrolog](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/build-layer.yml/badge.svg)](https://github.com/fok666/aws-lambda-astrolog/actions/workflows/build-layer.yml)
+
 ## Building the layer
 
 Clone this repo and execute the build script. The script takes the desired version of Astrolog and passes it to the Docker build context as an argument. The `Dockerfile` builds Astrolog from source using AWS Lambda Docker image as build environment, generating a binary-compatible executable that can be used in AWS Lambda Python 3.x environment.
