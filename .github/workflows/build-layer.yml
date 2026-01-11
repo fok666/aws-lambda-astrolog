@@ -28,9 +28,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v6
 
+    - name: Set Dockerfile based on Python version
+      id: dockerfile
+      run: |
+        if [[ "${{ matrix.python_version }}" == "3.10" || "${{ matrix.python_version }}" == "3.11" ]]; then
+          echo "file=Dockerfile.al2" >> $GITHUB_OUTPUT
+        else
+          echo "file=Dockerfile.al2023" >> $GITHUB_OUTPUT
+        fi
+
     - name: Run build
       run: |
-        docker build --build-arg ASTROLOG_VERSION=${{ env.ASTROLOG_VERSION }} --build-arg LAMBDA_VERSION=${{ matrix.python_version }} -t aws-lambda-astrolog-py${{ matrix.python_version }} .
+        docker build -f ${{ steps.dockerfile.outputs.file }} --build-arg ASTROLOG_VERSION=${{ env.ASTROLOG_VERSION }} --build-arg LAMBDA_VERSION=${{ matrix.python_version }} -t aws-lambda-astrolog-py${{ matrix.python_version }} .
         docker images
         docker save -o aws-lambda-astrolog.tar aws-lambda-astrolog-py${{ matrix.python_version }}
         tar xvf aws-lambda-astrolog.tar repositories
