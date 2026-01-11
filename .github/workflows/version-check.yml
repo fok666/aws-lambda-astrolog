@@ -47,9 +47,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
         run: |
-          echo "🚀 Triggering docker-image.yml workflow..."
-          gh workflow run docker-image.yml
-          echo "✅ docker-image.yml workflow triggered successfully"
+          echo "🚀 Triggering build-layer.yml workflow..."
+          gh workflow run build-layer.yml
+          echo "✅ build-layer.yml workflow triggered successfully"
 
       - name: Version up to date
         if: steps.check.outputs.version == steps.current.outputs.version
