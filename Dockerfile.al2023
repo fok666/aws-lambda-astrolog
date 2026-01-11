@@ -20,6 +20,7 @@ WORKDIR /Astrolog/Astrolog-${ASTROLOG_VERSION}
 # Run make clean and make to compile the binary
 # Generate a zip file with the compiled binary and the data files
 ARG MAKE_ARGS
+ARG LAMBDA_VERSION
 RUN sed -i 's/^#define X11/\/\/#define X11/g' astrolog.h && \
 	sed -i 's/LIBS = -lm -lX11 -ldl -s/LIBS = -lm -ldl -s/g' Makefile \
 	&& make clean \
@@ -28,12 +29,13 @@ RUN sed -i 's/^#define X11/\/\/#define X11/g' astrolog.h && \
 	&& mkdir -p /opt/bin /out \
 	&& cd /Astrolog/Astrolog-${ASTROLOG_VERSION}/ \
 	&& cp astrolog *.as *.se1 *.txt /opt/bin/ \
-    && zip -r /out/astrolog-bin-${ASTROLOG_VERSION}.zip /opt
+    && zip -r /out/astrolog-bin-${ASTROLOG_VERSION}-python${LAMBDA_VERSION}.zip /opt
 
 FROM scratch AS final
 
 ARG ASTROLOG_VERSION
+ARG LAMBDA_VERSION
 
 WORKDIR /out
 
-COPY --from=build /out/astrolog-bin-${ASTROLOG_VERSION}.zip .
+COPY --from=build /out/astrolog-bin-${ASTROLOG_VERSION}-python${LAMBDA_VERSION}.zip .
