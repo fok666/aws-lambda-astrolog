@@ -3,14 +3,13 @@ import json
 
 DEBUG: bool = False
 
-# Default parameters
-CIDADE: str = "Porto Alegre"
+# Astrolog binary path
 ASTROLOG_BIN: list[str] = ["/opt/bin/astrolog"]
-DEFAULT_PARAMS: list[str] = ["-n", "-zL", CIDADE, "-Yt", "-Yv"]
 
 def standardInvoke(parameters:list[str]) -> list[str]:
+    """Execute Astrolog binary with given parameters."""
     chart_output: subprocess.CompletedProcess[bytes] = subprocess.run(
-        args=ASTROLOG_BIN + DEFAULT_PARAMS + parameters,
+        args=ASTROLOG_BIN + parameters,
         shell=False,
         capture_output=True
     )
@@ -28,22 +27,41 @@ def standardInvoke(parameters:list[str]) -> list[str]:
         return []
 
 def lambda_handler(event, context):
+    """
+    Generic Lambda handler that passes parameters to Astrolog binary.
+    
+    Event format:
+    {
+        "base_params": ["-n", "-zL", "Porto Alegre", "-Yt", "-Yv"],  // Optional: base configuration parameters
+        "parameters": ["-v"],  // Optional: specific command parameters
+        "skip_header_lines": 3  // Optional: number of header lines to skip (default: 3)
+    }
+    
+    Examples:
+    - {"parameters": ["-v"]} - Chart for current moment (no base config)
+    - {"base_params": ["-n", "-zL", "New York", "-Yt"], "parameters": ["-v"]} - Chart with location
+    - {"base_params": ["-n", "-zL", "London"], "parameters": ["-d", "-a0"]} - Transits for the day
+    - {"parameters": ["-dm"]} - Transits for the month
+    - {"parameters": ["-a0"]} - Aspects for the day
+    """
     if DEBUG: print(event)
 
-    # Default parameters for "Ceu do Dia"
-    event_parameters: list[str] = ["-v"]
-
-    if event != None:
-        if 'type' in event:
-            if event['type']   == "transitosDia": event_parameters = ["-d", "-a0"]
-            elif event['type'] == "transitosMes": event_parameters = ["-dm"]
-            elif event['type'] == "aspectosDia":  event_parameters = ["-a0"]
-            elif event['type'] == "customInvoke":
-                if 'parameters' in event:
-                    event_parameters = event['parameters']
+    # Extract parameters from event or use defaults
+    base_parameters: list[str] = []
+    event_parameters: list[str] = ["-v"]  # Default: chart for current moment
+    skip_header_lines: int = 3
+    
+    if event:
+        if 'base_params' in event and isinstance(event['base_params'], list):
+            base_parameters = event['base_params']
+        if 'parameters' in event and isinstance(event['parameters'], list):
+            event_parameters = event['parameters']
+        if 'skip_header_lines' in event:
+            skip_header_lines = int(event['skip_header_lines'])
 
     try:
-        lines: list[str] = standardInvoke(parameters=event_parameters)
+        # Combine base_params and parameters for the invocation
+        lines: list[str] = standardInvoke(parameters=base_parameters + event_parameters)
     except subprocess.CalledProcessError as e:
         return {
             "statusCode": 500,
@@ -61,7 +79,9 @@ def lambda_handler(event, context):
             "body": json.dumps(obj={"error": str(e)}).encode(encoding="utf-8")
         }
 
-    if len(lines) > 3: lines = lines[3:]
+    # Skip header lines if requested
+    if len(lines) > skip_header_lines:
+        lines = lines[skip_header_lines:]
 
     return {
         "statusCode": 200,
@@ -72,13 +92,36 @@ def lambda_handler(event, context):
     }
 
 def test_calls() -> None:
+    """Test the Lambda function with various parameter combinations."""
+    print("Test 1: Default (no parameters)")
     print(lambda_handler(None, None))
-    print(lambda_handler({"type": None}, None))
-    print(lambda_handler({"type": "ceuDia"}, None))
-    print(lambda_handler({"type": "transitosDia"}, None))
-    print(lambda_handler({"type": "transitosMes"}, None))
-    print(lambda_handler({"type": "aspectosDia"}, None))
-    print(lambda_handler({"type": "customInvoke", "parameters": ["-v"]}, None))
+    
+    print("\nTest 2: Empty event")
+    print(lambda_handler({}, None))
+    
+    print("\nTest 3: Chart for current moment")
+    print(lambda_handler({"parameters": ["-v"]}, None))
+    
+    print("\nTest 4: Chart with location")
+    print(lambda_handler({
+        "base_params": ["-n", "-zL", "Porto Alegre", "-Yt", "-Yv"],
+        "parameters": ["-v"]
+    }, None))
+    
+    print("\nTest 5: Transits for the day with location")
+    print(lambda_handler({
+        "base_params": ["-n", "-zL", "New York"],
+        "parameters": ["-d", "-a0"]
+    }, None))
+    
+    print("\nTest 6: Transits for the month")
+    print(lambda_handler({"parameters": ["-dm"]}, None))
+    
+    print("\nTest 7: Aspects for the day")
+    print(lambda_handler({"parameters": ["-a0"]}, None))
+    
+    print("\nTest 8: Custom skip header lines")
+    print(lambda_handler({"parameters": ["-v"], "skip_header_lines": 0}, None))
 
 if __name__ == "__main__":
     test_calls()
