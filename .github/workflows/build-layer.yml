@@ -40,7 +40,7 @@ jobs:
 
     # Add a step to upload the build artifact to a release or other storage location
     - name: Upload build artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: aws-astrolog-bin-${{ env.ASTROLOG_VERSION }}
         path: out/*.zip
