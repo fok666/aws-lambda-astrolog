@@ -1,0 +1,57 @@
+name: Weekly Version Check
+
+on:
+  schedule:
+    - cron: '0 1 * * 0'  # Every Sunday at 1 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-and-update-version:
+    name: Check and Update Astrolog Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v6
+
+      - name: Get latest astrolog version
+        id: check
+        run: |
+          chmod +x ./checkVersion.sh
+          LATEST_VERSION=$(./checkVersion.sh)
+          echo "Latest astrolog version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get current ASTROLOG_VERSION variable
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ASTROLOG_VERSION=$(gh variable get ASTROLOG_VERSION 2>/dev/null || echo "not set")
+          echo "Current ASTROLOG_VERSION: $ASTROLOG_VERSION"
+          echo "version=$ASTROLOG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update ASTROLOG_VERSION variable if needed
+        if: steps.check.outputs.version != steps.current.outputs.version
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+        run: |
+          echo "Updating ASTROLOG_VERSION from ${{ steps.current.outputs.version }} to ${{ steps.check.outputs.version }}"
+          gh variable set ASTROLOG_VERSION --body "${{ steps.check.outputs.version }}"
+          echo "✅ ASTROLOG_VERSION updated successfully"
+
+      - name: Trigger Docker Image Build
+        if: steps.check.outputs.version != steps.current.outputs.version
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ADMIN_TOKEN }}
+        run: |
+          echo "🚀 Triggering docker-image.yml workflow..."
+          gh workflow run docker-image.yml
+          echo "✅ docker-image.yml workflow triggered successfully"
+
+      - name: Version up to date
+        if: steps.check.outputs.version == steps.current.outputs.version
+        run: |
+          echo "✅ ASTROLOG_VERSION is already up to date (${{ steps.current.outputs.version }})"
