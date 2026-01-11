@@ -2,8 +2,8 @@ ARG LAMBDA_VERSION
 FROM public.ecr.aws/lambda/python:${LAMBDA_VERSION} AS build
 
 # Install build dependencies
-RUN yum install -y make gcc-c++ wget zip unzip \
-    && yum clean all
+RUN dnf install -y make gcc-c++ wget zip unzip \
+    && dnf clean all
 
 WORKDIR /Astrolog
 
