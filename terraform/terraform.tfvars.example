@@ -1,0 +1,14 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Lambda Function Configuration
+function_name   = "astrolog-function"
+python_runtime  = "python3.12"
+timeout         = 30
+memory_size     = 256
+
+# Layer Configuration
+layer_package_path = "../out/astrolog-bin-7.50.tar.gz"
+
+# Enable Function URL for direct HTTP access (optional)
+enable_function_url = true

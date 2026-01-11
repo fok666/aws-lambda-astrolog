@@ -1,0 +1,10 @@
+Parameters:
+  FunctionName: astrolog-function
+  PythonRuntime: python3.12
+  Timeout: 30
+  MemorySize: 256
+  LayerPackageS3Bucket: your-bucket-name
+  LayerPackageS3Key: astrolog-bin-7.50.tar.gz
+  LambdaCodeS3Bucket: your-bucket-name
+  LambdaCodeS3Key: lambda_function.zip
+  EnableFunctionUrl: 'true'

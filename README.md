@@ -56,3 +56,152 @@ drwxr-xr-x root/root         0 2022-12-06 11:39 opt/bin/
 ## Requirements
 
 Build script depends on Docker and jq.
+
+## Using the Lambda Function
+
+The `lambda/` directory contains a generic Lambda function that demonstrates how to invoke the Astrolog binary with custom parameters.
+
+### Lambda Function Event Format
+
+The Lambda function accepts the following event structure:
+
+```json
+{
+  "base_params": ["-n", "-zL", "New York", "-Yt", "-Yv"],
+  "parameters": ["-v"],
+  "skip_header_lines": 3
+}
+```
+
+**Parameters:**
+- `base_params` (optional): Base configuration parameters (e.g., location settings)
+- `parameters` (optional): Specific Astrolog command parameters. Default: `["-v"]`
+- `skip_header_lines` (optional): Number of header lines to skip from output. Default: `3`
+
+**Examples:**
+
+Chart for current moment (no base config):
+```json
+{"parameters": ["-v"]}
+```
+
+Chart with location:
+```json
+{
+  "base_params": ["-n", "-zL", "Porto Alegre", "-Yt", "-Yv"],
+  "parameters": ["-v"]
+}
+```
+
+Daily transits with location:
+```json
+{
+  "base_params": ["-n", "-zL", "London"],
+  "parameters": ["-d", "-a0"]
+}
+```
+
+## Deployment
+
+### Option 1: Terraform
+
+Deploy the Lambda function and layer using Terraform:
+
+```bash
+# Navigate to terraform directory
+cd terraform
+
+# Copy and customize variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your configuration
+
+# Initialize Terraform
+terraform init
+
+# Plan deployment
+terraform plan
+
+# Apply configuration
+terraform apply
+```
+
+**Required variables:**
+- `layer_package_path`: Path to the built Astrolog layer package (e.g., `../out/astrolog-bin-7.50.tar.gz`)
+
+**Optional variables:**
+- `aws_region`: AWS region (default: `us-east-1`)
+- `function_name`: Lambda function name (default: `astrolog-function`)
+- `python_runtime`: Python runtime version (default: `python3.12`)
+- `timeout`: Function timeout in seconds (default: `30`)
+- `memory_size`: Function memory in MB (default: `256`)
+- `enable_function_url`: Enable Lambda Function URL (default: `false`)
+
+**Outputs:**
+- `lambda_function_name`: Name of the deployed Lambda function
+- `lambda_function_arn`: ARN of the Lambda function
+- `lambda_layer_arn`: ARN of the Astrolog layer
+- `lambda_function_url`: Function URL (if enabled)
+- `lambda_role_arn`: IAM role ARN
+
+### Option 2: AWS CloudFormation
+
+Deploy using CloudFormation:
+
+```bash
+# First, upload the layer and function code to S3
+aws s3 cp out/astrolog-bin-7.50.tar.gz s3://your-bucket-name/
+aws s3 cp lambda_function.zip s3://your-bucket-name/
+
+# Copy and customize parameters
+cp cloudformation/parameters.example.yaml cloudformation/parameters.yaml
+# Edit parameters.yaml with your S3 bucket and keys
+
+# Deploy the stack
+aws cloudformation create-stack \
+  --stack-name astrolog-lambda \
+  --template-body file://cloudformation/template.yaml \
+  --parameters file://cloudformation/parameters.yaml \
+  --capabilities CAPABILITY_NAMED_IAM
+
+# Check stack status
+aws cloudformation describe-stacks --stack-name astrolog-lambda
+```
+
+**Required parameters:**
+- `LayerPackageS3Bucket`: S3 bucket containing the layer package
+- `LayerPackageS3Key`: S3 key for the layer (e.g., `astrolog-bin-7.50.tar.gz`)
+- `LambdaCodeS3Bucket`: S3 bucket containing the function code
+- `LambdaCodeS3Key`: S3 key for the function code (e.g., `lambda_function.zip`)
+
+### Testing the Lambda Function
+
+Invoke the function using AWS CLI:
+
+```bash
+# Basic invocation (chart for current moment)
+aws lambda invoke \
+  --function-name astrolog-function \
+  --payload '{"parameters": ["-v"]}' \
+  response.json
+
+# With location and custom parameters
+aws lambda invoke \
+  --function-name astrolog-function \
+  --payload '{"base_params": ["-n", "-zL", "New York", "-Yt"], "parameters": ["-v"]}' \
+  response.json
+
+# View the response
+cat response.json | jq -r '.body' | jq '.'
+```
+
+If Function URL is enabled:
+
+```bash
+# Get the Function URL
+FUNCTION_URL=$(aws lambda get-function-url-config --function-name astrolog-function --query 'FunctionUrl' --output text)
+
+# Invoke via HTTP
+curl -X POST "${FUNCTION_URL}" \
+  -H "Content-Type: application/json" \
+  -d '{"parameters": ["-v"]}'
+```

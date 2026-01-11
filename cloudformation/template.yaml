@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Lambda function with Astrolog binary layer'
+
+Parameters:
+  FunctionName:
+    Type: String
+    Default: astrolog-function
+    Description: Name of the Lambda function
+  
+  PythonRuntime:
+    Type: String
+    Default: python3.12
+    AllowedValues:
+      - python3.9
+      - python3.10
+      - python3.11
+      - python3.12
+    Description: Python runtime version
+  
+  Timeout:
+    Type: Number
+    Default: 30
+    MinValue: 3
+    MaxValue: 900
+    Description: Lambda function timeout in seconds
+  
+  MemorySize:
+    Type: Number
+    Default: 256
+    MinValue: 128
+    MaxValue: 10240
+    Description: Lambda function memory size in MB
+  
+  LayerPackageS3Bucket:
+    Type: String
+    Description: S3 bucket containing the Astrolog layer package
+  
+  LayerPackageS3Key:
+    Type: String
+    Description: S3 key for the Astrolog layer package (e.g., astrolog-bin-7.50.tar.gz)
+  
+  LambdaCodeS3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda function code
+  
+  LambdaCodeS3Key:
+    Type: String
+    Description: S3 key for the Lambda function code (e.g., lambda_function.zip)
+  
+  EnableFunctionUrl:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable Lambda Function URL for direct HTTP invocation
+
+Conditions:
+  CreateFunctionUrl: !Equals [!Ref EnableFunctionUrl, 'true']
+
+Resources:
+  # IAM Role for Lambda Function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${FunctionName}-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Name
+          Value: !Sub '${FunctionName}-role'
+
+  # Lambda Layer for Astrolog
+  AstrologLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: astrolog-binary
+      Description: Astrolog binary and supporting files for AWS Lambda
+      Content:
+        S3Bucket: !Ref LayerPackageS3Bucket
+        S3Key: !Ref LayerPackageS3Key
+      CompatibleRuntimes:
+        - python3.9
+        - python3.10
+        - python3.11
+        - python3.12
+
+  # Lambda Function
+  AstrologFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Runtime: !Ref PythonRuntime
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: !Ref Timeout
+      MemorySize: !Ref MemorySize
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key: !Ref LambdaCodeS3Key
+      Layers:
+        - !Ref AstrologLayer
+      Environment:
+        Variables:
+          DEBUG: 'false'
+      Tags:
+        - Key: Name
+          Value: !Ref FunctionName
+
+  # Lambda Function URL (Optional)
+  AstrologFunctionUrl:
+    Type: AWS::Lambda::Url
+    Condition: CreateFunctionUrl
+    Properties:
+      TargetFunctionArn: !GetAtt AstrologFunction.Arn
+      AuthType: NONE  # Change to AWS_IAM for authenticated access
+
+  # Permission for Function URL
+  AstrologFunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Condition: CreateFunctionUrl
+    Properties:
+      FunctionName: !Ref AstrologFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref AstrologFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionName'
+
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt AstrologFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionArn'
+
+  LambdaLayerArn:
+    Description: ARN of the Astrolog Lambda layer
+    Value: !Ref AstrologLayer
+    Export:
+      Name: !Sub '${AWS::StackName}-LayerArn'
+
+  LambdaFunctionUrl:
+    Description: Lambda Function URL (if enabled)
+    Condition: CreateFunctionUrl
+    Value: !GetAtt AstrologFunctionUrl.FunctionUrl
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionUrl'
+
+  LambdaRoleArn:
+    Description: ARN of the IAM role for Lambda function
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
